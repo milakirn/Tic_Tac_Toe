@@ -1,17 +1,22 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 
 public class GameController : MonoBehaviour
 {
+    public TurnManager turnManager;
+    public GameObject winner;
+
     private GameObject[] _cells = new GameObject[9];
-
     private Cell[] _cellObjects = new Cell[9];
-
     private Sprite[] _cellSprite = new Sprite[9];
 
+
+    private void Awake()
+    {
+        turnManager = GetComponent<TurnManager>();
+    }
 
     private void Start()
     {
@@ -19,15 +24,40 @@ public class GameController : MonoBehaviour
         {
             _cells[i] = this.gameObject.transform.GetChild(i).gameObject;
             _cellObjects[i] = _cells[i].GetComponent<Cell>();
-            _cellSprite[i] = _cellObjects[i]._spriteRenderer.sprite;
         }
     }
 
     private void Update()
     {
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            _cellSprite[i] = _cellObjects[i].spriteRenderer.sprite;
+        }
+
         bool winner = CheckWinner();
-        if (winner)
-            Debug.Log("We have a Winner");
+        if (winner || turnManager.turnIndex == 8)
+        {
+            PauseBeforeRestart();
+            StartCoroutine(EndGame(winner));
+        }
+    }
+
+    public void Restart()
+    {
+        foreach (Cell cell in _cellObjects)
+        {
+            cell.spriteRenderer.sprite = null;
+            cell._isPlayed = false;
+        }
+    }
+
+    public void PauseBeforeRestart()
+    {
+        foreach (Cell cell in _cellObjects)
+        {
+            cell.spriteRenderer.sprite = null;
+            cell._isPlayed = true;
+        }
     }
 
     private bool CheckWinner()
@@ -56,6 +86,11 @@ public class GameController : MonoBehaviour
             return true;
         }
 
+        if (CheckValues(0, 4) && CheckValues(0, 8))
+            return true;
+
+        if (CheckValues(2, 4) && CheckValues(2, 6))
+            return true;
 
         return false;
     }
@@ -77,5 +112,23 @@ public class GameController : MonoBehaviour
         }
         else
             return false;
+    }
+
+    private IEnumerator EndGame(bool isWinner)
+    {
+        TMP_Text winnerText = winner.GetComponentInChildren<TMP_Text>();
+
+        if (isWinner)
+            winnerText.text = turnManager.WhichName() + " IS A WINNER!";
+        else
+            winnerText.text = "IT'S DRAW!";
+
+        winner.SetActive(true);
+
+        yield return new WaitForSeconds(5.0f);
+        turnManager.turnIndex = -1;
+
+        Restart();
+        winner.SetActive(false);
     }
 }
